@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ── Mobile-first base resets ───────────────────────────────── */
+html {
+  font-size: 16px;
+}
+
+body {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  font-family: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+/* Make range inputs tall enough to tap comfortably on touch screens */
+input[type="range"] {
+  height: 28px;
+  cursor: pointer;
+}
+
+.start-study-slider {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 9999px;
+  background: #22c55e;
+  cursor: pointer;
+}
+
+.start-study-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #22c55e;
+}
+
+.start-study-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 4px solid #16a34a;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  margin-top: -9px;
+}
+
+.start-study-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #22c55e;
+}
+
+.start-study-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 4px solid #16a34a;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+/* Prevent images from overflowing their containers */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure textareas don't cause horizontal scroll */
+textarea {
+  max-width: 100%;
+}
