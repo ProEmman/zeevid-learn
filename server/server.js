@@ -212,8 +212,14 @@ app.post('/auth/login', async (req, res) => {
 
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
 
+    const tokenPayload = {
+      user_id: user.user_id,
+      user_type: user.user_type,
+      username: user.username,
+    }
+    console.log('7. JWT payload:', tokenPayload)
     const token = jwt.sign(
-      { user_id: user.user_id, user_type: user.user_type },
+      tokenPayload,
       process.env.JWT_SECRET || 'zeevid_jwt_secret',
       { expiresIn: '7d' }
     )
@@ -319,14 +325,31 @@ app.post('/auth/reset-password', async (req, res) => {
 
 // ─── Auth Middleware ──────────────────────────────────────────────────────────
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization']
   const token = authHeader && authHeader.split(' ')[1]
   console.log('[auth] header:', authHeader ? `Bearer ${token?.substring(0, 20)}...` : 'MISSING')
   if (!token) return res.status(401).json({ error: 'Access token required' })
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET || 'zeevid_jwt_secret')
-    req.user = user
+    const decodedUser = jwt.verify(token, process.env.JWT_SECRET || 'zeevid_jwt_secret')
+
+    if (!decodedUser.user_type && decodedUser.user_id) {
+      console.warn('[auth] token missing user_type; looking up user record for compatibility')
+      const { data: dbUser, error } = await supabase
+        .from('users')
+        .select('user_id, user_type, username')
+        .eq('user_id', decodedUser.user_id)
+        .maybeSingle()
+
+      if (error) throw error
+      if (dbUser) {
+        decodedUser.user_type = dbUser.user_type
+        decodedUser.username = decodedUser.username || dbUser.username
+      }
+    }
+
+    req.user = decodedUser
+    console.log('[auth] req.user:', req.user)
     next()
   } catch (err) {
     console.error('[auth] jwt.verify failed:', err.message)
@@ -337,6 +360,7 @@ function authenticateToken(req, res, next) {
 // ─── Documents ────────────────────────────────────────────────────────────────
 
 app.post('/api/documents/upload', authenticateToken, async (req, res) => {
+  console.log('[documents/upload] req.user:', req.user)
   if (req.user.user_type !== 'teacher') return res.status(403).json({ error: 'Teachers only' })
   const { lecture_name, topic, class_level, document_content, document_name, document_url, file_name } = req.body
   if (!class_level || (!document_content && !document_url)) {
