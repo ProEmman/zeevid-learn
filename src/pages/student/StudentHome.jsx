@@ -631,7 +631,25 @@ function StudentHomeContent() {
                     }`}
                   >
                     <span className="flex items-center gap-3">
-                      <Icon className={`shrink-0 h-6 w-6 ${isActive ? 'text-[#059669]' : 'text-[#374151]'}`} />
+                      {item.key === 'profile' ? (
+                        storedUser.avatar_url ? (
+                          <img
+                            src={storedUser.avatar_url}
+                            alt="Profile"
+                            className="shrink-0 rounded-full object-cover"
+                            style={{ width: 32, height: 32, border: '2px solid #e5e7eb' }}
+                          />
+                        ) : (
+                          <div
+                            className="shrink-0 rounded-full flex items-center justify-center text-white"
+                            style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #059669, #047857)', fontSize: 13, fontWeight: 700 }}
+                          >
+                            {getMsgInitials(storedUser.full_name)}
+                          </div>
+                        )
+                      ) : (
+                        <Icon className={`shrink-0 h-6 w-6 ${isActive ? 'text-[#059669]' : 'text-[#374151]'}`} />
+                      )}
                       <span className={`text-[16px] font-semibold ${isActive ? 'text-[#059669]' : 'text-[#1f2937]'}`}>
                         {item.label}
                       </span>
