@@ -33,9 +33,9 @@ export default function Navbar() {
           className="flex cursor-pointer items-center gap-[10px] text-left transition-opacity duration-150 hover:opacity-90"
         >
           <img
-            src="/ZeeVid2.png"
+            src="/ZeeVid.png"
             alt="ZeeVid Learn+"
-            className="h-[36px] w-[36px] rounded-[8px] object-cover"
+            className="h-[40px] w-[40px] rounded-[10px] object-cover"
           />
           <div>
             <h1 className="text-[18px] font-bold leading-tight text-white">ZeeVid Learn+</h1>

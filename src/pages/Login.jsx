@@ -364,7 +364,7 @@ function Login() {
         formPanel={
           <>
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <img src="/ZeeVid2.png" alt="ZeeVid Learn+" style={{ width: 60, height: 60, objectFit: 'contain', margin: '0 auto 10px' }} />
+              <img src="/ZeeVid.png" alt="ZeeVid Learn+" style={{ width: 60, height: 60, objectFit: 'contain', margin: '0 auto 10px' }} />
               <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.8)', marginBottom: 5, textShadow }}>WELCOME BACK</p>
               <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', marginBottom: 5, textShadow }}>Sign In to ZeeVid Learn+</h1>
               <p style={{ fontSize: 14, fontWeight: 400, fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>Enter your credentials to continue</p>
@@ -427,7 +427,7 @@ function Login() {
         formPanel={
           <>
             <div style={{ textAlign: 'center', marginBottom: 18 }}>
-              <img src="/ZeeVid2.png" alt="ZeeVid Learn+" style={{ width: 50, height: 50, objectFit: 'contain', margin: '0 auto 8px' }} />
+              <img src="/ZeeVid.png" alt="ZeeVid Learn+" style={{ width: 50, height: 50, objectFit: 'contain', margin: '0 auto 8px' }} />
               <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.8)', marginBottom: 4, textShadow }}>GET STARTED</p>
               <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', marginBottom: 4, textShadow }}>Create Your Account</h1>
               <p style={{ fontSize: 14, fontWeight: 400, fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>Join ZeeVid Learn+ for free</p>
@@ -538,7 +538,7 @@ function Login() {
       formPanel={
         <>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <img src="/ZeeVid2.png" alt="ZeeVid Learn+" style={{ width: 60, height: 60, objectFit: 'contain', margin: '0 auto 10px' }} />
+            <img src="/ZeeVid.png" alt="ZeeVid Learn+" style={{ width: 60, height: 60, objectFit: 'contain', margin: '0 auto 10px' }} />
             <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.8)', marginBottom: 5, textShadow }}>ACCOUNT RECOVERY</p>
             <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', marginBottom: 5, textShadow }}>Reset Your Password</h1>
             <p style={{ fontSize: 14, fontWeight: 400, fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>Enter your email or phone and we'll send a reset link</p>
