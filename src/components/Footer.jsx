@@ -30,8 +30,21 @@ export default function Footer({ minimal = false }) {
   return (
     <footer className="bg-[#1a1f2e] px-4 py-5 text-white sm:px-6 sm:py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-7xl">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
-          <div className="border-b border-white/10 pb-6 text-center md:border-b-0 md:pb-0 md:text-left">
+        <div className="block text-center md:hidden">
+          <div className="flex flex-col items-center">
+            <img
+              src="/ZeeVid.png"
+              alt="ZeeVid Learn+"
+              className="h-8 w-8 rounded-[8px] object-cover"
+            />
+            <p className="mt-3 text-base font-bold text-white">ZeeVid Learn+</p>
+            <p className="mt-1 text-[13px] text-white/70">Next-generation learning starts here</p>
+            <p className="mt-4 text-[12px] text-white/50">© 2026 ZeeVid Learn+. All rights reserved.</p>
+          </div>
+        </div>
+
+        <div className="hidden md:grid md:grid-cols-3 md:gap-8">
+          <div className="text-left">
             <div className="flex items-center justify-center gap-[10px] md:justify-start">
               <img
                 src="/ZeeVid.png"
@@ -44,7 +57,7 @@ export default function Footer({ minimal = false }) {
             <p className="mt-4 text-[12px] text-white/50">© 2026 ZeeVid Learn+. All rights reserved.</p>
           </div>
 
-          <div className="border-b border-white/10 pb-6 text-center md:border-b-0 md:pb-0 md:text-left">
+          <div className="text-left">
             <h3 className="mb-3 text-[14px] font-bold text-white">Quick Links</h3>
             <div className="flex flex-col gap-2">
               {links.map(link => (
@@ -60,7 +73,7 @@ export default function Footer({ minimal = false }) {
             </div>
           </div>
 
-          <div className="text-center md:text-left">
+          <div className="text-left">
             <h3 className="mb-3 text-[14px] font-bold text-white">About</h3>
             <p className="text-[13px] leading-6 text-white/70">
               ZeeVid Learn+ is an AI-powered study platform helping teachers and students achieve more together.
@@ -82,7 +95,7 @@ export default function Footer({ minimal = false }) {
           </div>
         </div>
 
-        <div className="mt-6 border-t border-white/15 pt-4 text-center text-[12px] text-white/50">
+        <div className="mt-6 hidden border-t border-white/15 pt-4 text-center text-[12px] text-white/50 md:block">
           {'Built with ♥ for teachers and students everywhere'}
         </div>
       </div>
