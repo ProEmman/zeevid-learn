@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, CheckCircle, Star, User } from 'lucide-react'
+import Footer from '../../components/Footer'
 import { API_URL, authHeaders } from '../../utils/api'
 
 function Results() {
@@ -49,16 +50,19 @@ function Results() {
 
   if (!results) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow p-8 text-center">
-          <p className="text-gray-600 text-lg">No results found</p>
-          <button
-            onClick={() => navigate('/student/home')}
-            className="mt-4 bg-green-600 text-white font-bold px-6 py-3 rounded-xl min-h-[48px]"
-          >
-            Go Home
-          </button>
+      <div className="min-h-screen bg-gray-100 flex flex-col">
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow p-8 text-center">
+            <p className="text-gray-600 text-lg">No results found</p>
+            <button
+              onClick={() => navigate('/student/home')}
+              className="mt-4 bg-green-600 text-white font-bold px-6 py-3 rounded-xl min-h-[48px]"
+            >
+              Go Home
+            </button>
+          </div>
         </div>
+        <Footer />
       </div>
     )
   }
@@ -79,7 +83,7 @@ function Results() {
     User
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
 
       <div className="bg-green-600 text-white p-4 sm:p-6">
         <div className="max-w-4xl mx-auto">
@@ -88,7 +92,7 @@ function Results() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto w-full flex-1 p-4 sm:p-6">
         {isSaving && (
           <div className="bg-white rounded-2xl shadow p-4 mb-6 text-center text-green-600 font-semibold animate-pulse">
             Saving your results...
@@ -166,6 +170,7 @@ function Results() {
         </div>
 
       </div>
+      <Footer />
     </div>
   )
 }

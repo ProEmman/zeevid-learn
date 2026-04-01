@@ -4,6 +4,7 @@ import { ArrowLeft, BookOpen, Brain, FileText, LayoutDashboard, Menu, MessageSqu
 import { API_URL, authHeaders } from '../../utils/api'
 import { supabase } from '../../lib/supabase'
 import PDFViewer from '../../components/PDFViewer'
+import Footer from '../../components/Footer'
 import Navbar from '../../components/Navbar'
 
 const getDocumentStoragePath = (documentUrl) => {
@@ -825,10 +826,10 @@ function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f9fafb]">
+    <div className="min-h-screen bg-[#f9fafb] flex flex-col">
       <Navbar />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col md:min-h-[calc(100vh-96px)] md:flex-row">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:min-h-[calc(100vh-96px)] md:flex-row">
         <div className="px-4 pt-4 sm:px-6 md:hidden">
           <button
             type="button"
@@ -1064,6 +1065,8 @@ function TeacherDashboard() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   )
 }

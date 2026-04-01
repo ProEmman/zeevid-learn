@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Footer from '../../components/Footer'
 
 function getSavedDeck() {
   const savedDeck = localStorage.getItem('zeevid_current_deck')
@@ -92,23 +93,26 @@ function Study() {
 
   if (!deck || questions.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow p-8 text-center">
-          <p className="text-4xl mb-4">...</p>
-          <p className="text-gray-600 text-lg font-semibold">No deck selected</p>
-          <button
-            onClick={() => navigate('/student/home')}
-            className="mt-4 bg-green-600 text-white font-bold px-6 py-3 rounded-xl min-h-[48px]"
-          >
-            Go Back
-          </button>
+      <div className="min-h-screen bg-gray-100 flex flex-col">
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow p-8 text-center">
+            <p className="text-4xl mb-4">...</p>
+            <p className="text-gray-600 text-lg font-semibold">No deck selected</p>
+            <button
+              onClick={() => navigate('/student/home')}
+              className="mt-4 bg-green-600 text-white font-bold px-6 py-3 rounded-xl min-h-[48px]"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
+        <Footer />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
 
       {/* Header */}
       <div className="bg-green-600 text-white p-4 sm:p-6">
@@ -128,7 +132,7 @@ function Study() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto w-full flex-1 p-4 sm:p-6">
 
         {/* Progress bar */}
         <div className="mb-6">
@@ -221,6 +225,7 @@ function Study() {
         </button>
 
       </div>
+      <Footer />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Footer from '../components/Footer'
 import { useAuth } from '../context/AuthContext'
 
 // ── Keyframe animations ───────────────────────────────────────────────────────
@@ -190,7 +191,6 @@ function PromoPanel({ heading, subtitle, bullets, ctaLabel, onCta, borderRadius 
           style={{ ...outlineBtn, background: hover ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
           {ctaLabel}
         </button>
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 20 }}>ZeeVid Learn+ &copy; 2026</p>
       </div>
     </div>
   )
@@ -211,17 +211,16 @@ const Ok = ({ msg }) => msg ? (
 // On lg (1024px+): max-width 900px centred
 function Shell({ formPanel, promoPanel }) {
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%)', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%)', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <style>{styleTag}</style>
       <Blobs />
-      <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
 
         {/* ── Mobile: single card (hidden on md+) ── */}
         <div className="block md:hidden" style={{ width: '100%', maxWidth: 440 }}>
           <div style={{ ...glassLeft, borderRadius: 24, padding: '32px 24px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}>
             {formPanel}
           </div>
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 16 }}>ZeeVid Learn+ &copy; 2026</p>
         </div>
 
         {/* ── Tablet (md) ── */}
@@ -245,6 +244,7 @@ function Shell({ formPanel, promoPanel }) {
         </div>
 
       </div>
+      <Footer minimal />
     </div>
   )
 }

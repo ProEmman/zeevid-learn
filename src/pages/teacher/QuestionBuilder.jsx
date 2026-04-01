@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Brain, CheckCircle, ClipboardList, Edit, Star } from 'lucide-react'
+import Footer from '../../components/Footer'
 import { API_URL, authHeaders } from '../../utils/api'
 
 const CLASS_LEVELS = Array.from({ length: 10 }, (_, i) => `Level ${i + 1}`)
@@ -94,7 +95,7 @@ function QuestionBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
 
       <div className="bg-blue-600 text-white p-4 sm:p-6">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
@@ -111,7 +112,7 @@ function QuestionBuilder() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto w-full flex-1 p-4 sm:p-6">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 text-red-600 text-sm">
             {error}
@@ -276,6 +277,8 @@ function QuestionBuilder() {
         )}
 
       </div>
+
+      <Footer />
     </div>
   )
 }

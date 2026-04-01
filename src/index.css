@@ -21,6 +21,18 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+html,
+body,
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root > * {
+  flex: 1;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
@@ -187,4 +199,8 @@ body.dark-mode,
 .dark-mode [class*="shadow-[0_2px_12px_rgba(0,0,0,0.06)]"],
 .dark-mode [class*="shadow-[0_2px_8px_rgba(0,0,0,0.06)]"] {
   box-shadow: 0 8px 24px rgba(0,0,0,0.35) !important;
+}
+
+footer {
+  margin-top: auto;
 }

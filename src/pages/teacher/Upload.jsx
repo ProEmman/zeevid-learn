@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, FileText, HelpCircle, Upload as UploadIcon } from 'lucide-react'
+import Footer from '../../components/Footer'
 import { supabase } from '../../lib/supabase'
 import { API_URL, authHeaders } from '../../utils/api'
 
@@ -279,7 +280,7 @@ function Upload() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       <div className="bg-blue-600 text-white p-4 sm:p-6">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div>
@@ -295,7 +296,7 @@ function Upload() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto w-full flex-1 p-4 sm:p-6">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 text-red-600 text-sm">
             {error}
@@ -473,6 +474,8 @@ function Upload() {
           {isSaving ? 'Saving...' : 'Upload & Save'}
         </button>
       </div>
+
+      <Footer />
     </div>
   )
 }

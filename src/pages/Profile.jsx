@@ -4,6 +4,7 @@ import { ArrowLeft, Camera, Check, Eye, EyeOff, Lock, Menu, Moon, Palette, Sun, 
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { API_URL, authHeaders } from '../utils/api'
+import Footer from '../components/Footer'
 import Navbar from '../components/Navbar'
 import { applyTheme, THEME_OPTIONS } from '../utils/theme'
 
@@ -352,10 +353,10 @@ function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f9fafb]">
+    <div className="min-h-screen bg-[#f9fafb] flex flex-col">
       <Navbar />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col">
         <header className="border-b border-[#e5e7eb] bg-white px-4 py-4 shadow-sm sm:px-6">
           <div className="flex items-center gap-3">
             <button
@@ -713,6 +714,8 @@ function Profile() {
           </main>
         </div>
       </div>
+
+      <Footer />
     </div>
   )
 }

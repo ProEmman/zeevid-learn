@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BarChart, BookOpen, ClipboardList, FileText, LayoutDashboard, Menu, MessageSquare, Send, User, X } from 'lucide-react'
 import { API_URL, authHeaders } from '../../utils/api'
 import PDFViewer from '../../components/PDFViewer'
+import Footer from '../../components/Footer'
 import Navbar from '../../components/Navbar'
 
 class StudentHomeErrorBoundary extends Component {
@@ -564,10 +565,10 @@ function StudentHomeContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f9fafb]">
+    <div className="min-h-screen bg-[#f9fafb] flex flex-col">
       <Navbar />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col md:min-h-[calc(100vh-96px)] md:flex-row">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:min-h-[calc(100vh-96px)] md:flex-row">
         <div className="px-4 pt-4 sm:px-6 md:hidden">
           <button
             type="button"
@@ -996,6 +997,8 @@ function StudentHomeContent() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   )
 }
