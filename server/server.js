@@ -686,6 +686,211 @@ app.put('/api/profile/password', authenticateToken, async (req, res) => {
   }
 })
 
+// ─── Messages ────────────────────────────────────────────────────────────────
+
+app.post('/api/messages/send', authenticateToken, async (req, res) => {
+  const { receiver_id, content } = req.body
+  if (!receiver_id || !content || !content.trim()) {
+    return res.status(400).json({ error: 'receiver_id and content are required' })
+  }
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: req.user.user_id,
+        receiver_id,
+        content: content.trim(),
+        is_read: false,
+      })
+      .select()
+      .single()
+    if (error) throw error
+    res.status(201).json(data)
+  } catch (err) {
+    console.error('Send message error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/messages/unread-count', authenticateToken, async (req, res) => {
+  try {
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', req.user.user_id)
+      .eq('is_read', false)
+    if (error) throw error
+    res.json({ count: count || 0 })
+  } catch (err) {
+    res.json({ count: 0 })
+  }
+})
+
+app.get('/api/messages/conversations', authenticateToken, async (req, res) => {
+  if (req.user.user_type !== 'teacher') return res.status(403).json({ error: 'Teachers only' })
+  try {
+    const teacherId = req.user.user_id
+
+    const [{ data: sent }, { data: received }] = await Promise.all([
+      supabase.from('messages').select('*').eq('sender_id', teacherId).order('created_at', { ascending: false }),
+      supabase.from('messages').select('*').eq('receiver_id', teacherId).order('created_at', { ascending: false }),
+    ])
+
+    const allMsgs = [...(sent || []), ...(received || [])]
+
+    // Collect unique student IDs (the other party)
+    const studentIdSet = new Set()
+    for (const m of allMsgs) {
+      const otherId = m.sender_id === teacherId ? m.receiver_id : m.sender_id
+      studentIdSet.add(otherId)
+    }
+
+    if (studentIdSet.size === 0) return res.json([])
+
+    const { data: studentUsers } = await supabase
+      .from('users')
+      .select('user_id, full_name, avatar_url, user_type')
+      .in('user_id', [...studentIdSet])
+      .eq('user_type', 'student')
+
+    const { data: studentRecords } = await supabase
+      .from('students')
+      .select('user_id, class_level')
+      .in('user_id', [...studentIdSet])
+
+    const classLevelMap = {}
+    for (const s of studentRecords || []) classLevelMap[s.user_id] = s.class_level
+
+    const conversations = (studentUsers || []).map(student => {
+      const thread = allMsgs
+        .filter(m =>
+          (m.sender_id === student.user_id && m.receiver_id === teacherId) ||
+          (m.sender_id === teacherId && m.receiver_id === student.user_id)
+        )
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+      const last = thread[0]
+      const unreadCount = thread.filter(m => m.sender_id === student.user_id && !m.is_read).length
+
+      return {
+        user_id: student.user_id,
+        full_name: student.full_name,
+        avatar_url: student.avatar_url,
+        class_level: classLevelMap[student.user_id] || '',
+        last_message: last?.content || '',
+        last_message_time: last?.created_at || null,
+        unread_count: unreadCount,
+      }
+    })
+
+    conversations.sort((a, b) => new Date(b.last_message_time) - new Date(a.last_message_time))
+    res.json(conversations)
+  } catch (err) {
+    console.error('Get conversations error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/messages/conversation/:student_id', authenticateToken, async (req, res) => {
+  if (req.user.user_type !== 'teacher') return res.status(403).json({ error: 'Teachers only' })
+  try {
+    const teacherId = req.user.user_id
+    const studentId = req.params.student_id
+
+    const [{ data: t2s }, { data: s2t }] = await Promise.all([
+      supabase.from('messages').select('*').eq('sender_id', teacherId).eq('receiver_id', studentId),
+      supabase.from('messages').select('*').eq('sender_id', studentId).eq('receiver_id', teacherId),
+    ])
+
+    const messages = [...(t2s || []), ...(s2t || [])].sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    )
+
+    // Mark student → teacher messages as read
+    await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('sender_id', studentId)
+      .eq('receiver_id', teacherId)
+      .eq('is_read', false)
+
+    const [{ data: studentUser }, { data: studentRecord }] = await Promise.all([
+      supabase.from('users').select('user_id, full_name, avatar_url').eq('user_id', studentId).single(),
+      supabase.from('students').select('class_level').eq('user_id', studentId).maybeSingle(),
+    ])
+
+    res.json({
+      student: { ...(studentUser || {}), class_level: studentRecord?.class_level || '' },
+      messages,
+    })
+  } catch (err) {
+    console.error('Get conversation error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/messages/my-messages', authenticateToken, async (req, res) => {
+  if (req.user.user_type !== 'student') return res.status(403).json({ error: 'Students only' })
+  try {
+    const studentId = req.user.user_id
+
+    const { data: studentRecord } = await supabase
+      .from('students')
+      .select('class_level')
+      .eq('user_id', studentId)
+      .maybeSingle()
+
+    let teacherUserId = null
+
+    if (studentRecord?.class_level) {
+      // Find teacher whose assigned_classes contains this student's class_level
+      const { data: allTeachers } = await supabase
+        .from('teachers')
+        .select('user_id, assigned_classes')
+
+      const match = (allTeachers || []).find(t =>
+        Array.isArray(t.assigned_classes) && t.assigned_classes.includes(studentRecord.class_level)
+      )
+      if (match) teacherUserId = match.user_id
+    }
+
+    if (!teacherUserId) {
+      // Fallback: find from existing message history
+      const [{ data: sent }, { data: received }] = await Promise.all([
+        supabase.from('messages').select('receiver_id').eq('sender_id', studentId).limit(1),
+        supabase.from('messages').select('sender_id').eq('receiver_id', studentId).limit(1),
+      ])
+      if (sent?.[0]) teacherUserId = sent[0].receiver_id
+      else if (received?.[0]) teacherUserId = received[0].sender_id
+    }
+
+    if (!teacherUserId) return res.json({ teacher: null, messages: [] })
+
+    const [{ data: teacherUser }, { data: t2s }, { data: s2t }] = await Promise.all([
+      supabase.from('users').select('user_id, full_name, avatar_url').eq('user_id', teacherUserId).single(),
+      supabase.from('messages').select('*').eq('sender_id', teacherUserId).eq('receiver_id', studentId),
+      supabase.from('messages').select('*').eq('sender_id', studentId).eq('receiver_id', teacherUserId),
+    ])
+
+    const messages = [...(t2s || []), ...(s2t || [])].sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    )
+
+    // Mark teacher → student messages as read
+    await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('sender_id', teacherUserId)
+      .eq('receiver_id', studentId)
+      .eq('is_read', false)
+
+    res.json({ teacher: teacherUser || null, messages })
+  } catch (err) {
+    console.error('Get my messages error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 
 app.listen(5000, () => {

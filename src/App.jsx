@@ -8,6 +8,7 @@ import StudentHome from './pages/student/StudentHome'
 import Study from './pages/student/Study'
 import Results from './pages/student/Results'
 import Profile from './pages/Profile'
+import Messages from './pages/Messages'
 
 function ProtectedRoute({ children, requiredType }) {
   const { user, loading } = useAuth()
@@ -44,6 +45,9 @@ function AppRoutes() {
 
       <Route path="/profile" element={
         <ProtectedRoute><Profile /></ProtectedRoute>
+      } />
+      <Route path="/messages" element={
+        <ProtectedRoute><Messages /></ProtectedRoute>
       } />
     </Routes>
   )
