@@ -628,7 +628,7 @@ function TeacherDashboard() {
           </div>
 
           <div className="pt-2 md:pt-5">
-            <div className="px-4 pb-2 text-[13px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">
+            <div className="px-5 pb-3 text-[15px] font-extrabold uppercase tracking-[0.08em] text-[#6b7280] md:px-4 md:pb-2 md:text-[13px] md:font-bold">
               Dashboard
             </div>
             <nav className="space-y-1">
@@ -640,15 +640,21 @@ function TeacherDashboard() {
                     key={item.key}
                     type="button"
                     onClick={() => handlePanelSelect(item.key)}
-                    className={`mx-2 flex min-h-[44px] w-[calc(100%-16px)] items-center gap-[10px] rounded-lg px-4 py-3 text-left transition-all duration-150 ${
-                      isActive ? 'bg-[#eff6ff] text-[#1d4ed8]' : 'bg-transparent text-[#374151] hover:bg-[#f3f4f6]'
+                    className={`mx-3 flex min-h-[64px] w-[calc(100%-24px)] items-center justify-between rounded-[16px] border-2 border-[#e5e7eb] bg-white px-5 py-[18px] text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-150 hover:scale-[1.01] hover:bg-[#f8fafc] hover:border-[#d1d5db] md:mx-2 md:min-h-[44px] md:w-[calc(100%-16px)] md:justify-start md:gap-[10px] md:rounded-lg md:border-0 md:bg-transparent md:px-4 md:py-3 md:shadow-none md:hover:scale-100 md:hover:bg-[#f3f4f6] md:hover:border-transparent ${
+                      isActive ? 'bg-[#eff6ff] border-[#2563eb] md:text-[#1d4ed8]' : 'text-[#374151]'
+                    } ${
+                      !isActive ? 'md:text-[#374151]' : ''
                     }`}
                     style={isActive ? { borderLeft: '3px solid #1d4ed8' } : undefined}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-[14px] font-medium">{item.label}</span>
+                    <span className="flex items-center gap-[14px] md:contents">
+                      <Icon className={`shrink-0 ${isActive ? 'text-[#1d4ed8]' : 'text-[#374151]'} h-[26px] w-[26px] md:h-4 md:w-4 md:text-current`} />
+                      <span className={`flex-1 text-[17px] font-semibold text-[#1f2937] md:text-[14px] md:font-medium ${isActive ? 'text-[#1d4ed8]' : ''}`}>
+                        {item.label}
+                      </span>
+                    </span>
                     <span
-                      className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                      className="rounded-full px-[14px] py-[6px] text-[15px] font-extrabold text-white md:px-2 md:py-0.5 md:text-[11px] md:font-bold"
                       style={{ backgroundColor: item.badgeColor }}
                     >
                       {item.count}
