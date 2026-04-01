@@ -8,7 +8,6 @@ export default function Navbar() {
   const storedUser = (() => { try { return JSON.parse(localStorage.getItem('zeevid_user') || '{}') } catch { return {} } })()
   const resolvedUserType = storedUser.user_type || user?.user_type
   const isTeacher = resolvedUserType === 'teacher'
-  const bgColor = isTeacher ? 'bg-blue-600' : 'bg-green-600'
   const btnTextColor = isTeacher ? 'text-blue-600' : 'text-green-600'
   const btnHoverBg = isTeacher ? 'hover:bg-blue-50' : 'hover:bg-green-50'
   const portalLabel = isTeacher ? 'Teacher Portal' : 'Student Portal'
@@ -23,7 +22,10 @@ export default function Navbar() {
   }
 
   return (
-    <div className={`${bgColor} text-white px-4 py-4 sm:px-4 sm:py-5`}>
+    <div
+      className="text-white px-4 py-4 sm:px-4 sm:py-5"
+      style={{ background: 'var(--color-primary, #2563eb)' }}
+    >
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
         <button
           type="button"

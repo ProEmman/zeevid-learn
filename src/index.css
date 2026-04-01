@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+:root {
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+}
+
 /* ── Mobile-first base resets ───────────────────────────────── */
 html {
   font-size: 16px;
@@ -28,6 +33,8 @@ body {
   font-family: 'Inter', sans-serif;
   line-height: 1.6;
   letter-spacing: -0.01em;
+  background-color: #f9fafb;
+  color: #111827;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -95,4 +102,89 @@ img {
 /* Ensure textareas don't cause horizontal scroll */
 textarea {
   max-width: 100%;
+}
+
+.dark-mode {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+  --sidebar-bg: #1e293b;
+  --sidebar-border: #334155;
+}
+
+body.dark-mode,
+.dark-mode body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+.dark-mode .bg-white {
+  background-color: #1e293b !important;
+}
+
+.dark-mode .bg-gray-50,
+.dark-mode .bg-gray-100 {
+  background-color: #0f172a !important;
+}
+
+.dark-mode .text-gray-900,
+.dark-mode .text-gray-800,
+.dark-mode .text-gray-700 {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .text-gray-500,
+.dark-mode .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .border-gray-200,
+.dark-mode .border-gray-100 {
+  border-color: #334155 !important;
+}
+
+.dark-mode input,
+.dark-mode textarea,
+.dark-mode select {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .shadow,
+.dark-mode .shadow-sm,
+.dark-mode .shadow-md {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+
+.dark-mode [class*="bg-[#f9fafb]"],
+.dark-mode [class*="bg-[#f8fafc]"] {
+  background-color: #0f172a !important;
+}
+
+.dark-mode [class*="bg-[#eff6ff]"] {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+}
+
+.dark-mode [class*="border-[#e5e7eb]"],
+.dark-mode [class*="border-gray-300"] {
+  border-color: #334155 !important;
+}
+
+.dark-mode [class*="text-[#1f2937]"],
+.dark-mode [class*="text-[#374151]"],
+.dark-mode [class*="text-[#111827]"] {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode [class*="text-[#6b7280]"] {
+  color: #94a3b8 !important;
+}
+
+.dark-mode [class*="shadow-[0_2px_12px_rgba(0,0,0,0.06)]"],
+.dark-mode [class*="shadow-[0_2px_8px_rgba(0,0,0,0.06)]"] {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35) !important;
 }

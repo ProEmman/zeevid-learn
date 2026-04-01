@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Camera, Eye, EyeOff, Lock, Menu, User as UserIcon, X } from 'lucide-react'
+import { ArrowLeft, Camera, Check, Eye, EyeOff, Lock, Menu, Moon, Palette, Sun, User as UserIcon, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { API_URL, authHeaders } from '../utils/api'
 import Navbar from '../components/Navbar'
+import { applyTheme, THEME_OPTIONS } from '../utils/theme'
 
 function getInitials(fullName) {
   if (!fullName) return '?'
@@ -65,6 +66,74 @@ function PasswordInput({ value, onChange, placeholder, visible, onToggle }) {
   )
 }
 
+function ThemeCard({ theme, selected, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative overflow-hidden rounded-[16px] border-2 text-left transition-all duration-150 hover:scale-[1.03] hover:shadow-lg ${
+        selected ? 'border-[#2563eb] shadow-[0_0_0_3px_rgba(37,99,235,0.2)]' : 'border-[#e5e7eb]'
+      }`}
+    >
+      <div className="h-[60px]" style={{ background: theme.sidebar }}>
+        <div className="h-[22px] w-full" style={{ background: theme.header }} />
+        <div className="flex h-[38px] items-center gap-2 px-3">
+          <div className="h-6 w-6 rounded-[8px] bg-white/70" />
+          <div className="space-y-1">
+            <div className="h-2.5 w-12 rounded-full bg-white/70" />
+            <div className="h-2 w-8 rounded-full bg-white/50" />
+          </div>
+        </div>
+      </div>
+      <div className="bg-white px-3 py-2 text-center text-[13px] font-semibold text-gray-700">
+        {theme.name}
+      </div>
+      {selected && (
+        <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#2563eb] text-white shadow-sm">
+          <Check className="h-4 w-4" />
+        </span>
+      )}
+    </button>
+  )
+}
+
+function DisplayModeCard({
+  selected,
+  onClick,
+  icon,
+  iconClassName,
+  title,
+  description,
+  preview,
+  selectedClassName = 'bg-[#eff6ff]',
+  titleClassName = 'text-gray-900',
+  descriptionClassName = 'text-gray-500',
+}) {
+  const IconComponent = icon
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative flex flex-1 flex-col rounded-[16px] border-2 p-6 text-left transition-all duration-150 hover:scale-[1.01] ${
+        selected ? `border-[#2563eb] ${selectedClassName}` : 'border-[#e5e7eb] bg-white'
+      }`}
+    >
+      {selected && (
+        <span className="absolute right-4 top-4 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#2563eb] text-white">
+          <Check className="h-4 w-4" />
+        </span>
+      )}
+      <div className="mb-4">
+        <IconComponent className={`h-8 w-8 ${iconClassName}`} />
+      </div>
+      <div className={`text-[16px] font-bold ${titleClassName}`}>{title}</div>
+      <div className={`mt-1 text-sm ${descriptionClassName}`}>{description}</div>
+      <div className="mt-5">{preview}</div>
+    </button>
+  )
+}
+
 function Profile() {
   const navigate = useNavigate()
   const { user, refreshUser } = useAuth()
@@ -83,6 +152,8 @@ function Profile() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [activeView, setActiveView] = useState('profile')
+  const [selectedTheme, setSelectedTheme] = useState(() => localStorage.getItem('zeevid_theme') || 'ocean-blue')
+  const [displayMode, setDisplayMode] = useState(() => localStorage.getItem('zeevid_display_mode') || 'light')
   const fileInputRef = useRef(null)
 
   const [pwForm, setPwForm] = useState({
@@ -246,11 +317,24 @@ function Profile() {
   const sidebarItems = [
     { key: 'profile', label: 'Profile Information', icon: UserIcon },
     { key: 'password', label: 'Change Password', icon: Lock },
+    { key: 'appearance', label: 'Appearance', icon: Palette },
   ]
 
   const handleViewSelect = (view) => {
     setActiveView(view)
     setIsSidebarOpen(false)
+  }
+
+  const handleThemeSelect = (themeId) => {
+    localStorage.setItem('zeevid_theme', themeId)
+    setSelectedTheme(themeId)
+    applyTheme()
+  }
+
+  const handleDisplayModeSelect = (mode) => {
+    localStorage.setItem('zeevid_display_mode', mode)
+    setDisplayMode(mode)
+    applyTheme()
   }
 
   if (loading) {
@@ -483,7 +567,7 @@ function Profile() {
                   </div>
                 </section>
               </div>
-            ) : (
+            ) : activeView === 'password' ? (
               <div className="mx-auto w-full max-w-3xl">
                 <section className="rounded-[20px] bg-white p-7 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
                   <div className="mb-6">
@@ -554,6 +638,74 @@ function Profile() {
                     >
                       {pwSaving ? 'Changing...' : 'Change Password'}
                     </button>
+                  </div>
+                </section>
+              </div>
+            ) : (
+              <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+                <section className="rounded-[20px] bg-white p-7 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+                  <div className="mb-6">
+                    <h2 className="text-[18px] font-bold text-gray-900">Choose a Theme</h2>
+                    <p className="mt-2 text-sm text-gray-500">Select a color theme for your dashboard</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                    {THEME_OPTIONS.map(theme => (
+                      <ThemeCard
+                        key={theme.id}
+                        theme={theme}
+                        selected={selectedTheme === theme.id}
+                        onClick={() => handleThemeSelect(theme.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                <section className="rounded-[20px] bg-white p-7 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+                  <div className="mb-6">
+                    <h2 className="text-[18px] font-bold text-gray-900">Display Mode</h2>
+                    <p className="mt-2 text-sm text-gray-500">Choose how ZeeVid Learn+ looks across your pages.</p>
+                  </div>
+
+                  <div className="flex flex-col gap-4 md:flex-row md:gap-4">
+                    <DisplayModeCard
+                      selected={displayMode === 'light'}
+                      onClick={() => handleDisplayModeSelect('light')}
+                      icon={Sun}
+                      iconClassName="text-[#f59e0b]"
+                      title="Light Mode"
+                      description="Clean white background"
+                      preview={(
+                        <div className="rounded-[14px] border border-[#e5e7eb] bg-white p-3 shadow-sm">
+                          <div className="h-3 w-24 rounded-full bg-gray-900/80" />
+                          <div className="mt-3 space-y-2">
+                            <div className="h-2.5 w-full rounded-full bg-gray-200" />
+                            <div className="h-2.5 w-4/5 rounded-full bg-gray-200" />
+                          </div>
+                        </div>
+                      )}
+                    />
+
+                    <DisplayModeCard
+                      selected={displayMode === 'dark'}
+                      onClick={() => handleDisplayModeSelect('dark')}
+                      icon={Moon}
+                      iconClassName="text-[#818cf8]"
+                      title="Dark Mode"
+                      description="Easy on the eyes"
+                      selectedClassName="bg-[#111827]"
+                      titleClassName={displayMode === 'dark' ? 'text-white' : 'text-gray-900'}
+                      descriptionClassName={displayMode === 'dark' ? 'text-slate-300' : 'text-gray-500'}
+                      preview={(
+                        <div className="rounded-[14px] border border-[#334155] bg-[#0f172a] p-3 shadow-sm">
+                          <div className="h-3 w-24 rounded-full bg-slate-100/90" />
+                          <div className="mt-3 space-y-2">
+                            <div className="h-2.5 w-full rounded-full bg-slate-600" />
+                            <div className="h-2.5 w-4/5 rounded-full bg-slate-600" />
+                          </div>
+                        </div>
+                      )}
+                    />
                   </div>
                 </section>
               </div>
