@@ -1,6 +1,6 @@
-import { Component, useCallback, useEffect, useRef, useState } from 'react'
+﻿import { Component, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, ClipboardList, FileText, Layers3 } from 'lucide-react'
+import { BarChart, BookOpen, ClipboardList, FileText, LayoutDashboard, Menu, X } from 'lucide-react'
 import { API_URL, authHeaders } from '../../utils/api'
 import PDFViewer from '../../components/PDFViewer'
 
@@ -40,6 +40,7 @@ function StudentHomeContent() {
   const navigate = useNavigate()
   const [teacherNotes, setTeacherNotes] = useState([])
   const [decks, setDecks] = useState([])
+  const [results, setResults] = useState([])
   const [studentClassLevel, setStudentClassLevel] = useState('')
   const [studentNotes, setStudentNotes] = useState('')
   const [showNoteInput, setShowNoteInput] = useState(false)
@@ -50,10 +51,9 @@ function StudentHomeContent() {
   const [shuffle, setShuffle] = useState(true)
   const [showAnswers, setShowAnswers] = useState('during')
   const [activeSection, setActiveSection] = useState(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const notesRef = useRef(null)
-  const decksRef = useRef(null)
 
   const fetchStudyMaterials = useCallback(async () => {
     setLoading(true)
@@ -65,22 +65,27 @@ function StudentHomeContent() {
         throw new Error('Your session is missing. Please log in again.')
       }
 
-      const [notesRes, decksRes] = await Promise.all([
+      const [notesRes, decksRes, resultsRes] = await Promise.all([
         fetch(`${API_URL}/api/documents`, { headers: authHeaders() }),
         fetch(`${API_URL}/api/decks`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/results`, { headers: authHeaders() }),
       ])
 
       const notesData = await notesRes.json()
       const decksData = await decksRes.json()
+      const resultsData = await resultsRes.json()
 
       if (!notesRes.ok) throw new Error(notesData.error || 'Failed to load notes')
       if (!decksRes.ok) throw new Error(decksData.error || 'Failed to load decks')
+      if (!resultsRes.ok) throw new Error(resultsData.error || 'Failed to load results')
 
       const notesList = Array.isArray(notesData) ? notesData : []
       const decksList = Array.isArray(decksData) ? decksData : []
+      const resultsList = Array.isArray(resultsData) ? resultsData : []
 
       setTeacherNotes(notesList)
       setDecks(decksList)
+      setResults(resultsList)
 
       if (!studentClassLevel) {
         const inferredLevel = notesList[0]?.class_level || decksList[0]?.class_level || ''
@@ -144,19 +149,240 @@ function StudentHomeContent() {
     }
   }, [selectedDeck])
 
-  useEffect(() => {
-    if (activeSection === 'notes' && notesRef.current) {
-      notesRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-    if (activeSection === 'decks' && decksRef.current) {
-      decksRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [activeSection])
+  const handleSectionSelect = (sectionKey) => {
+    setActiveSection(current => current === sectionKey ? null : sectionKey)
+    setIsSidebarOpen(false)
+  }
 
-  const allDecks = decks
+  const sidebarItems = [
+    { key: 'notes', label: 'Teacher Notes', icon: FileText, count: teacherNotes.length, badgeColor: '#7c3aed' },
+    { key: 'decks', label: 'Question Decks', icon: BookOpen, count: decks.length, badgeColor: '#059669' },
+    { key: 'results', label: 'My Results', icon: BarChart, count: results.length, badgeColor: '#2563eb' },
+    { key: 'personal', label: 'Personal Notes', icon: ClipboardList },
+  ]
+
+  const panelClose = () => {
+    setActiveSection(null)
+    setIsSidebarOpen(false)
+  }
+
+  const renderEmptyState = () => (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-14 text-center">
+      <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
+        <LayoutDashboard className="h-10 w-10 text-gray-400" />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-800">Select a section from the sidebar</h3>
+      <p className="mt-2 text-sm text-gray-500">Choose what you want to view on the left</p>
+    </div>
+  )
+
+  const renderPanelContainer = (title, content) => (
+    <div className="bg-white rounded-2xl shadow p-6">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <h3 className="text-[20px] font-bold text-gray-800">{title}</h3>
+        <button
+          onClick={panelClose}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+          aria-label="Close panel"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      {content}
+    </div>
+  )
+
+  const renderTeacherNotes = () => renderPanelContainer('Teacher Notes', teacherNotes.length === 0 ? (
+    <div className="bg-white rounded-2xl shadow p-8 text-center">
+      <div className="flex justify-center mb-4">
+        <FileText className="w-10 h-10 text-gray-400" />
+      </div>
+      <p className="text-gray-500">Your teacher has not uploaded any notes yet.</p>
+    </div>
+  ) : teacherNotes.map((note) => (
+    <div
+      key={note.document_id}
+      onClick={() => setOpenNote(note)}
+      className="bg-white rounded-2xl shadow p-4 mb-3 flex items-center justify-between cursor-pointer"
+    >
+      <div className="flex items-center gap-4">
+        <FileText className="w-8 h-8 text-gray-500" />
+        <div>
+          <p className="text-[16px] font-bold text-gray-800">{note.document_name}</p>
+          {(note.lecture_name || note.topic) && (
+            <p className="text-[13px] font-medium text-green-600">
+              {[note.lecture_name, note.topic].filter(Boolean).join(' · ')}
+            </p>
+          )}
+          <p className="text-[13px] font-medium text-gray-400">
+            {[note.class_level, note.created_at ? new Date(note.created_at).toLocaleDateString() : ''].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-2 shrink-0">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setOpenNote(note)
+          }}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition min-h-[44px]"
+        >
+          Open
+        </button>
+        <button
+          title="Download note"
+          onClick={(e) => {
+            e.stopPropagation()
+            const blob = new Blob([note.document_content || ''], { type: 'text/plain' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = note.document_name || 'note.txt'
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition min-h-[44px]"
+        >
+          <FileText className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  )))
+
+  const renderDecks = () => renderPanelContainer('Question Decks', decks.length === 0 ? (
+    <div className="bg-white rounded-2xl shadow p-8 text-center">
+      <div className="flex justify-center mb-4">
+        <BookOpen className="w-10 h-10 text-gray-400" />
+      </div>
+      <p className="text-gray-500 text-lg">No question decks available yet</p>
+      <p className="text-gray-400 text-sm mt-2">Your teacher has not created any decks yet</p>
+    </div>
+  ) : decks.map((deck) => (
+    <div
+      key={deck.deck_id}
+      className={`rounded-2xl shadow p-4 mb-3 flex items-center justify-between cursor-pointer border transition-all duration-200 ease-in-out ${
+        showModal && selectedDeck?.deck_id === deck.deck_id
+          ? 'bg-blue-50 border-blue-500 scale-[1.02] shadow-md'
+          : 'bg-white border-transparent hover:shadow-md'
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <BookOpen className="w-8 h-8 text-gray-500" />
+        <div>
+          <p className="text-[16px] font-bold text-gray-800">{deck.topic}</p>
+          <p className="text-[13px] font-medium text-green-600">Lesson {deck.lesson_number}</p>
+          {deck.questions.length === 0 ? (
+            <p className="text-gray-400 text-[13px] font-medium mt-1">No Q yet</p>
+          ) : (
+            <span className="inline-block bg-green-100 text-green-700 font-bold px-3 py-1 rounded-xl text-[13px] mt-1">
+              {deck.questions.length} Q
+            </span>
+          )}
+          <p className="text-[13px] font-medium text-gray-400 mt-1">
+            {[deck.class_level, deck.created_at ? new Date(deck.created_at).toLocaleDateString() : ''].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          setSelectedDeck(deck)
+          setShowModal(true)
+        }}
+        className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition min-h-[44px] shrink-0"
+      >
+        Start
+      </button>
+    </div>
+  )))
+
+  const renderResults = () => renderPanelContainer('My Results', results.length === 0 ? (
+    <div className="bg-white rounded-2xl shadow p-8 text-center">
+      <div className="flex justify-center mb-4">
+        <BarChart className="w-10 h-10 text-gray-400" />
+      </div>
+      <p className="text-gray-500 text-lg">No quiz results yet</p>
+      <p className="text-gray-400 text-sm mt-2">Complete a study session to see your results here</p>
+    </div>
+  ) : results.map((result) => {
+    const percentage = result.total ? Math.round((result.score / result.total) * 100) : 0
+    const relatedDeck = decks.find(deck => String(deck.deck_id) === String(result.deck_id))
+    const scoreClass = percentage >= 60 ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'
+
+    return (
+      <div key={result.result_id || `${result.deck_id}-${result.created_at}`} className="bg-white rounded-2xl shadow p-4 mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-[16px] font-bold text-gray-800">{relatedDeck?.topic || 'Study Deck'}</p>
+          <p className="text-[13px] font-medium text-gray-500 mt-1">
+            {relatedDeck?.lesson_number ? `Lesson ${relatedDeck.lesson_number} · ` : ''}
+            {result.created_at ? new Date(result.created_at).toLocaleDateString() : 'Recently taken'}
+          </p>
+          <p className="text-[13px] font-medium text-gray-400 mt-1">
+            Score: {result.score} / {result.total}
+          </p>
+        </div>
+        <div className={`rounded-xl px-4 py-2 text-sm font-bold ${scoreClass}`}>
+          {percentage}%
+        </div>
+      </div>
+    )
+  }))
+
+  const renderPersonalNotes = () => renderPanelContainer('Personal Notes', (
+    <div className="bg-white rounded-2xl shadow p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[20px] font-bold text-gray-800 inline-flex items-center gap-2">
+          <ClipboardList className="w-6 h-6" />
+          <span>My Personal Notes</span>
+        </h2>
+        <button
+          onClick={() => setShowNoteInput(!showNoteInput)}
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition min-h-[44px]"
+        >
+          {showNoteInput ? 'Hide' : 'Add Notes'}
+        </button>
+      </div>
+
+      {showNoteInput && (
+        <div>
+          <textarea
+            value={studentNotes}
+            onChange={(e) => setStudentNotes(e.target.value)}
+            placeholder="Paste your personal study notes here..."
+            className="w-full h-40 border border-gray-200 rounded-xl p-4 text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-green-400"
+          />
+          <div className="flex gap-4 mt-4">
+            <button
+              onClick={handleStudentNotesSave}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition"
+            >
+              Save Notes
+            </button>
+            <button
+              onClick={() => setShowNoteInput(false)}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 rounded-xl transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showNoteInput && (
+        <p className="text-gray-400 text-sm">Click "Add Notes" to paste your personal study notes.</p>
+      )}
+    </div>
+  ))
+
+  const renderActiveSection = () => {
+    if (!activeSection) return renderEmptyState()
+    if (activeSection === 'notes') return renderTeacherNotes()
+    if (activeSection === 'decks') return renderDecks()
+    if (activeSection === 'results') return renderResults()
+    return renderPersonalNotes()
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#f9fafb]">
       <div className="bg-green-600 text-white p-4 sm:p-6">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div>
@@ -172,251 +398,112 @@ function StudentHomeContent() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-8">
-        <div>
-          <h2 className="text-[28px] font-extrabold text-gray-800">Welcome, Student!</h2>
-          <p className="text-gray-500 text-[16px] font-medium mt-1">Here is everything ready for your study session.</p>
-          {studentClassLevel && (
-            <p className="text-green-600 text-[14px] font-semibold mt-2">Class Level: {studentClassLevel}</p>
-          )}
+      <div className="mx-auto flex w-full max-w-7xl flex-col md:min-h-[calc(100vh-96px)] md:flex-row">
+        <div className="px-4 pt-4 sm:px-6 md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-gray-200 bg-white p-3 text-gray-700 shadow-sm transition hover:bg-gray-50"
+            aria-label="Open learning navigation"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
 
-        {loading && (
-          <div className="bg-white rounded-2xl shadow p-6 text-center text-green-600 font-semibold animate-pulse">
-            Loading your study materials...
-          </div>
+        {isSidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close sidebar overlay"
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          />
         )}
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-600 text-sm">
-            {error} - <button onClick={fetchStudyMaterials} className="underline font-semibold">Retry</button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div
-            onClick={() => setActiveSection(activeSection === 'notes' ? null : 'notes')}
-            className={`rounded-2xl shadow-lg p-6 cursor-pointer transition-all duration-200 ease-in-out ${
-              activeSection === 'notes'
-                ? 'bg-gradient-to-br from-[#6d28d9] to-[#4c1d95] scale-[1.02]'
-                : 'bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] hover:brightness-95 hover:scale-[1.02]'
-            }`}
-          >
-            <div className="flex justify-center mb-4">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            <p className="text-[36px] font-extrabold text-white">
-              {teacherNotes.length}
-            </p>
-            <p className="text-[13px] mt-2 font-semibold text-white/85">Notes Available</p>
-            <p className="text-xs text-white/75 mt-6">Tap to view</p>
+        <aside
+          className={`fixed left-0 z-50 flex h-screen w-[280px] flex-col bg-white transition-transform duration-150 md:static md:z-auto md:h-auto md:min-h-[calc(100vh-96px)] md:w-[240px] md:translate-x-0 ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          style={{
+            top: 0,
+            borderRight: '1px solid #e5e7eb',
+            boxShadow: '2px 0 8px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div className="flex items-center justify-between px-4 pt-4 md:hidden">
+            <span className="text-sm font-semibold text-gray-700">Menu</span>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          <div
-            onClick={() => setActiveSection(activeSection === 'decks' ? null : 'decks')}
-            className={`rounded-2xl shadow-lg p-6 cursor-pointer transition-all duration-200 ease-in-out ${
-              activeSection === 'decks'
-                ? 'bg-gradient-to-br from-[#047857] to-[#065f46] scale-[1.02]'
-                : 'bg-gradient-to-br from-[#059669] to-[#047857] hover:brightness-95 hover:scale-[1.02]'
-            }`}
-          >
-            <div className="flex justify-center mb-4">
-              <Layers3 className="w-8 h-8 text-white" />
+          <div className="pt-2 md:pt-5">
+            <div className="px-4 pb-2 text-[13px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">
+              My Learning
             </div>
-            <p className="text-[36px] font-extrabold text-white">{allDecks.length}</p>
-            <p className="text-[13px] mt-2 font-semibold text-white/85">Question Decks</p>
-            <p className="text-xs text-white/75 mt-6">Tap to view</p>
-          </div>
-        </div>
+            <nav className="space-y-1">
+              {sidebarItems.map(item => {
+                const Icon = item.icon
+                const isActive = activeSection === item.key
 
-        <div>
-          <h2 className="text-[20px] font-bold text-gray-800 mb-2">My Study Materials</h2>
-          <p className="text-gray-500 text-sm mb-6">All content shared by your teacher</p>
-
-          <div className="space-y-8">
-            <div className="bg-white rounded-2xl shadow p-6">
-              <div
-                ref={notesRef}
-                className={`mb-4 transition-all duration-300 ${
-                  activeSection === 'notes'
-                    ? 'border-l-4 border-purple-500 pl-4 bg-purple-50 rounded-r-xl py-2'
-                    : ''
-                }`}
-              >
-                <h2 className="text-[20px] font-bold text-gray-800">Teacher Notes</h2>
-              </div>
-              {teacherNotes.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow p-8 text-center">
-                  <div className="flex justify-center mb-4">
-                    <FileText className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500">Your teacher has not uploaded any notes yet.</p>
-                </div>
-              ) : (
-                teacherNotes.map((note) => (
-                  <div
-                    key={note.document_id}
-                    onClick={() => setOpenNote(note)}
-                    className="bg-white rounded-2xl shadow p-4 mb-3 flex items-center justify-between cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      <FileText className="w-8 h-8 text-gray-500" />
-                      <div>
-                        <p className="text-[16px] font-bold text-gray-800">{note.document_name}</p>
-                        {(note.lecture_name || note.topic) && (
-                          <p className="text-[13px] font-medium text-green-600">
-                            {[note.lecture_name, note.topic].filter(Boolean).join(' · ')}
-                          </p>
-                        )}
-                        <p className="text-[13px] font-medium text-gray-400">
-                          {[note.class_level, note.created_at ? new Date(note.created_at).toLocaleDateString() : ''].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setOpenNote(note)
-                        }}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition min-h-[44px]"
-                      >
-                        Open
-                      </button>
-                      <button
-                        title="Download note"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const blob = new Blob([note.document_content || ''], { type: 'text/plain' })
-                          const url = URL.createObjectURL(blob)
-                          const a = document.createElement('a')
-                          a.href = url
-                          a.download = note.document_name || 'note.txt'
-                          a.click()
-                          URL.revokeObjectURL(url)
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition min-h-[44px]"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-6">
-              <div
-                ref={decksRef}
-                className={`mb-4 transition-all duration-300 ${
-                  activeSection === 'decks'
-                    ? 'border-l-4 border-green-500 pl-4 bg-green-50 rounded-r-xl py-2'
-                    : ''
-                }`}
-              >
-                <h2 className="text-[20px] font-bold text-gray-800 mb-2">Question Decks</h2>
-                <p className="text-gray-500 text-sm mb-6">Select a deck to start studying</p>
-              </div>
-
-              {allDecks.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow p-8 text-center">
-                  <div className="flex justify-center mb-4">
-                    <BookOpen className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 text-lg">No question decks available yet</p>
-                  <p className="text-gray-400 text-sm mt-2">Your teacher has not created any decks yet</p>
-                </div>
-              ) : (
-                allDecks.map((deck) => (
-                  <div
-                    key={deck.deck_id}
-                    className={`rounded-2xl shadow p-4 mb-3 flex items-center justify-between cursor-pointer border transition-all duration-200 ease-in-out ${
-                      showModal && selectedDeck?.deck_id === deck.deck_id
-                        ? 'bg-blue-50 border-blue-500 scale-[1.02] shadow-md'
-                        : 'bg-white border-transparent hover:shadow-md'
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => handleSectionSelect(item.key)}
+                    className={`mx-2 flex min-h-[44px] w-[calc(100%-16px)] items-center gap-[10px] rounded-lg px-4 py-3 text-left transition-all duration-150 ${
+                      isActive ? 'bg-[#f0fdf4] text-[#059669]' : 'bg-transparent text-[#374151] hover:bg-[#f3f4f6]'
                     }`}
+                    style={isActive ? { borderLeft: '3px solid #059669' } : undefined}
                   >
-                    <div className="flex items-center gap-4">
-                      <BookOpen className="w-8 h-8 text-gray-500" />
-                      <div>
-                        <p className="text-[16px] font-bold text-gray-800">{deck.topic}</p>
-                        <p className="text-[13px] font-medium text-green-600">Lesson {deck.lesson_number}</p>
-                        {deck.questions.length === 0 ? (
-                          <p className="text-gray-400 text-[13px] font-medium mt-1">No Q yet</p>
-                        ) : (
-                          <span className="inline-block bg-green-100 text-green-700 font-bold px-3 py-1 rounded-xl text-[13px] mt-1">
-                            {deck.questions.length} Q
-                          </span>
-                        )}
-                        <p className="text-[13px] font-medium text-gray-400 mt-1">
-                          {[deck.class_level, deck.created_at ? new Date(deck.created_at).toLocaleDateString() : ''].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedDeck(deck)
-                        setShowModal(true)
-                      }}
-                      className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition min-h-[44px] shrink-0"
-                    >
-                      Start
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 text-[14px] font-medium">{item.label}</span>
+                    {typeof item.count === 'number' && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                        style={{ backgroundColor: item.badgeColor }}
+                      >
+                        {item.count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
           </div>
-        </div>
 
-        <div>
-          <h2 className="text-[20px] font-bold text-gray-800 mb-2 mt-8">My Personal Space</h2>
-          <p className="text-gray-500 text-sm mb-6">Your own private study notes</p>
+          <div className="mt-auto px-4 pb-5 pt-4">
+            <div className="border-t border-gray-200 pt-4 text-sm font-semibold text-gray-500">ZeeVid Learn+</div>
+          </div>
+        </aside>
 
-          <div className="bg-white rounded-2xl shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[20px] font-bold text-gray-800 inline-flex items-center gap-2">
-                <ClipboardList className="w-6 h-6" />
-                <span>My Personal Notes</span>
-              </h2>
-              <button
-                onClick={() => setShowNoteInput(!showNoteInput)}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition min-h-[44px]"
-              >
-                {showNoteInput ? 'Hide' : 'Add Notes'}
-              </button>
-            </div>
-
-            {showNoteInput && (
-              <div>
-                <textarea
-                  value={studentNotes}
-                  onChange={(e) => setStudentNotes(e.target.value)}
-                  placeholder="Paste your personal study notes here..."
-                  className="w-full h-40 border border-gray-200 rounded-xl p-4 text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-green-400"
-                />
-                <div className="flex gap-4 mt-4">
-                  <button
-                    onClick={handleStudentNotesSave}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition"
-                  >
-                    Save Notes
-                  </button>
-                  <button
-                    onClick={() => setShowNoteInput(false)}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 rounded-xl transition"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!showNoteInput && (
-              <p className="text-gray-400 text-sm">Click "Add Notes" to paste your personal study notes.</p>
+        <main className="flex-1 bg-[#f9fafb] px-4 py-6 sm:px-6 md:p-6">
+          <div className="mb-8">
+            <h2 className="text-[28px] font-extrabold text-gray-800">Welcome, Student!</h2>
+            <p className="text-gray-500 text-[16px] font-medium mt-1">Here is everything ready for your study session.</p>
+            {studentClassLevel && (
+              <p className="text-green-600 text-[14px] font-semibold mt-2">Class Level: {studentClassLevel}</p>
             )}
           </div>
-        </div>
+
+          {loading && (
+            <div className="bg-white rounded-2xl shadow p-6 mb-6 text-center text-green-600 font-semibold animate-pulse">
+              Loading your study materials...
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 text-red-600 text-sm">
+              {error} - <button onClick={fetchStudyMaterials} className="underline font-semibold">Retry</button>
+            </div>
+          )}
+
+          {renderActiveSection()}
+        </main>
       </div>
 
       {openNote && openNote.document_url ? (

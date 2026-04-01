@@ -682,24 +682,22 @@ function TeacherDashboard() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="mb-8 flex gap-4">
             <div
               onClick={() => {
                 setActiveActionCard('upload')
                 localStorage.setItem('zeevid_teacher_active_card', 'upload')
                 navigate('/teacher/upload')
               }}
-              className={`rounded-2xl shadow p-6 cursor-pointer border transition-all duration-200 ease-in-out ${
+              className={`flex h-12 w-1/2 items-center justify-center gap-2 rounded-[14px] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(37,99,235,0.4)] transition-all duration-200 ease-in-out hover:scale-[1.02] hover:brightness-110 md:h-[52px] md:w-[220px] md:text-[15px] ${
                 activeActionCard === 'upload'
-                  ? 'bg-blue-50 border-blue-500 shadow-md'
-                  : 'bg-white border-transparent hover:shadow-md'
+                  ? 'ring-2 ring-blue-200'
+                  : ''
               }`}
+              style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
             >
-              <div className="bg-blue-100 w-14 h-14 rounded-xl flex items-center justify-center mb-4">
-                <UploadIcon className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-[18px] font-bold text-gray-800">Upload Content</h3>
-              <p className="text-gray-500 text-[14px] font-medium mt-1">Upload notes or pre-made questions for your students</p>
+              <UploadIcon className="h-5 w-5 text-white" />
+              <span>Upload Content</span>
             </div>
             <div
               onClick={() => {
@@ -707,17 +705,15 @@ function TeacherDashboard() {
                 localStorage.setItem('zeevid_teacher_active_card', 'builder')
                 navigate('/teacher/builder')
               }}
-              className={`rounded-2xl shadow p-6 cursor-pointer border transition-all duration-200 ease-in-out ${
+              className={`flex h-12 w-1/2 items-center justify-center gap-2 rounded-[14px] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(5,150,105,0.4)] transition-all duration-200 ease-in-out hover:scale-[1.02] hover:brightness-110 md:h-[52px] md:w-[220px] md:text-[15px] ${
                 activeActionCard === 'builder'
-                  ? 'bg-blue-50 border-blue-500 shadow-md'
-                  : 'bg-white border-transparent hover:shadow-md'
+                  ? 'ring-2 ring-green-200'
+                  : ''
               }`}
+              style={{ background: 'linear-gradient(135deg, #059669, #047857)' }}
             >
-              <div className="bg-green-100 w-14 h-14 rounded-xl flex items-center justify-center mb-4">
-                <Brain className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-[18px] font-bold text-gray-800">Question Builder</h3>
-              <p className="text-gray-500 text-[14px] font-medium mt-1">Use AI to generate questions from your notes</p>
+              <Brain className="h-5 w-5 text-white" />
+              <span>Question Builder</span>
             </div>
           </div>
 
