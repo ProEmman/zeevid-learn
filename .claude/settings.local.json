@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(find /c/Users/Pro_Emmanu/zeevid-learn -maxdepth 3 -not -path */node_modules/* -not -path */.git/*)"
     ]
   }
 }

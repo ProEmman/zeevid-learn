@@ -586,6 +586,106 @@ app.get('/api/results', authenticateToken, async (req, res) => {
   }
 })
 
+// ─── Profile ─────────────────────────────────────────────────────────────────
+
+app.get('/api/profile', authenticateToken, async (req, res) => {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('user_id, full_name, username, email, phone_number, user_type, bio, avatar_url, created_at')
+      .eq('user_id', req.user.user_id)
+      .single()
+
+    if (error || !user) return res.status(404).json({ error: 'User not found' })
+
+    const profile = { ...user }
+
+    if (user.user_type === 'student') {
+      const { data: student } = await supabase
+        .from('students')
+        .select('student_id, class_level, class_group')
+        .eq('user_id', req.user.user_id)
+        .maybeSingle()
+      if (student) {
+        profile.student_id = student.student_id
+        profile.class_level = student.class_level
+        profile.class_group = student.class_group
+      }
+    } else if (user.user_type === 'teacher') {
+      const { data: teacher } = await supabase
+        .from('teachers')
+        .select('teacher_id, assigned_classes')
+        .eq('user_id', req.user.user_id)
+        .maybeSingle()
+      if (teacher) {
+        profile.teacher_id = teacher.teacher_id
+        profile.assigned_classes = teacher.assigned_classes
+      }
+    }
+
+    res.json(profile)
+  } catch (err) {
+    console.error('Get profile error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.put('/api/profile', authenticateToken, async (req, res) => {
+  const { full_name, username, email, phone_number, bio, avatar_url } = req.body
+
+  try {
+    const updateData = {}
+    if (full_name !== undefined) updateData.full_name = full_name
+    if (username !== undefined) updateData.username = username
+    if (email !== undefined) updateData.email = email || null
+    if (phone_number !== undefined) updateData.phone_number = phone_number || null
+    if (bio !== undefined) updateData.bio = bio || null
+    if (avatar_url !== undefined) updateData.avatar_url = avatar_url || null
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('user_id', req.user.user_id)
+      .select('user_id, full_name, username, email, phone_number, user_type, bio, avatar_url')
+      .single()
+
+    if (error) throw error
+    res.json(data)
+  } catch (err) {
+    console.error('Update profile error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.put('/api/profile/password', authenticateToken, async (req, res) => {
+  const { current_password, new_password } = req.body
+
+  if (!current_password || !new_password) {
+    return res.status(400).json({ error: 'current_password and new_password are required' })
+  }
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('password_hash')
+      .eq('user_id', req.user.user_id)
+      .single()
+
+    if (error || !user) return res.status(404).json({ error: 'User not found' })
+
+    const valid = await bcrypt.compare(current_password, user.password_hash)
+    if (!valid) return res.status(400).json({ error: 'Current password is incorrect' })
+
+    const password_hash = await bcrypt.hash(new_password, 12)
+    await supabase.from('users').update({ password_hash }).eq('user_id', req.user.user_id)
+
+    res.json({ message: 'Password changed successfully' })
+  } catch (err) {
+    console.error('Change password error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 
 app.listen(5000, () => {

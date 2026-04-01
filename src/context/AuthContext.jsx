@@ -70,8 +70,19 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  const refreshUser = () => {
+    const savedUser = localStorage.getItem('zeevid_user')
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser))
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, register, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

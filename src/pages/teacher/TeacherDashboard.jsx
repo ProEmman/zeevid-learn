@@ -4,6 +4,7 @@ import { BookOpen, Brain, FileText, LayoutDashboard, Menu, Upload as UploadIcon,
 import { API_URL, authHeaders } from '../../utils/api'
 import { supabase } from '../../lib/supabase'
 import PDFViewer from '../../components/PDFViewer'
+import Navbar from '../../components/Navbar'
 
 const getDocumentStoragePath = (documentUrl) => {
   if (!documentUrl) return null
@@ -23,6 +24,8 @@ const getDocumentStoragePath = (documentUrl) => {
 
 function TeacherDashboard() {
   const navigate = useNavigate()
+  const storedUser = (() => { try { return JSON.parse(localStorage.getItem('zeevid_user') || '{}') } catch { return {} } })()
+  const firstName = (storedUser.full_name || 'Teacher').split(' ')[0]
   const [activeActionCard, setActiveActionCard] = useState(() => localStorage.getItem('zeevid_teacher_active_card') || '')
   const [decks, setDecks] = useState([])
   const [notes, setNotes] = useState([])
@@ -569,20 +572,7 @@ function TeacherDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f9fafb]">
-      <div className="bg-blue-600 text-white p-4 sm:p-6">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">ZeeVid Learn+</h1>
-            <p className="text-blue-200 text-sm">Teacher Portal</p>
-          </div>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-white text-blue-600 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-50 transition min-h-[44px]"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      <Navbar />
 
       <div className="mx-auto flex w-full max-w-7xl flex-col md:min-h-[calc(100vh-96px)] md:flex-row">
         <div className="px-4 pt-4 sm:px-6 md:hidden">
@@ -672,7 +662,7 @@ function TeacherDashboard() {
 
         <main className="flex-1 bg-[#f9fafb] px-4 py-6 sm:px-6 md:p-6">
           <div className="mb-8">
-            <h2 className="text-[28px] font-extrabold text-gray-800">Welcome, Teacher!</h2>
+            <h2 className="text-[28px] font-extrabold text-gray-800">Welcome, {firstName}!</h2>
             <p className="text-[16px] font-medium text-gray-600 mt-1">Manage your decks and create questions for your students.</p>
           </div>
 

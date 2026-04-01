@@ -7,6 +7,7 @@ import QuestionBuilder from './pages/teacher/QuestionBuilder'
 import StudentHome from './pages/student/StudentHome'
 import Study from './pages/student/Study'
 import Results from './pages/student/Results'
+import Profile from './pages/Profile'
 
 function ProtectedRoute({ children, requiredType }) {
   const { user, loading } = useAuth()
@@ -39,6 +40,10 @@ function AppRoutes() {
       } />
       <Route path="/student/results" element={
         <ProtectedRoute requiredType="student"><Results /></ProtectedRoute>
+      } />
+
+      <Route path="/profile" element={
+        <ProtectedRoute><Profile /></ProtectedRoute>
       } />
     </Routes>
   )
