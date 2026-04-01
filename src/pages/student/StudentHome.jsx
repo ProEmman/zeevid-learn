@@ -1,6 +1,6 @@
-﻿import { Component, useCallback, useEffect, useState } from 'react'
+﻿import { Component, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart, BookOpen, ClipboardList, FileText, LayoutDashboard, Menu, X } from 'lucide-react'
+import { BarChart, BookOpen, ClipboardList, FileText, LayoutDashboard, Menu, MessageSquare, Send, User, X } from 'lucide-react'
 import { API_URL, authHeaders } from '../../utils/api'
 import PDFViewer from '../../components/PDFViewer'
 import Navbar from '../../components/Navbar'
@@ -37,6 +37,58 @@ class StudentHomeErrorBoundary extends Component {
   }
 }
 
+function getMsgInitials(n) {
+  if (!n) return '?'
+  const p = n.trim().split(/\s+/)
+  return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
+
+function formatMsgTime(ts) {
+  if (!ts) return ''
+  const d = new Date(ts), now = new Date()
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  if (d.toDateString() === now.toDateString()) return time
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' · ' + time
+}
+
+function MsgInput({ onSend, disabled }) {
+  const [text, setText] = useState('')
+  const taRef = useRef(null)
+  const autoResize = () => {
+    if (!taRef.current) return
+    taRef.current.style.height = 'auto'
+    taRef.current.style.height = Math.min(taRef.current.scrollHeight, 72) + 'px'
+  }
+  const handleSend = () => {
+    const t = text.trim()
+    if (!t || disabled) return
+    onSend(t)
+    setText('')
+    if (taRef.current) taRef.current.style.height = 'auto'
+  }
+  return (
+    <div className="border-t border-gray-200 bg-white px-3 py-3 flex items-end gap-2 shrink-0">
+      <textarea
+        ref={taRef}
+        value={text}
+        onChange={e => { setText(e.target.value); autoResize() }}
+        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+        placeholder="Type a message... (Enter to send)"
+        rows={1}
+        className="flex-1 resize-none border border-gray-200 rounded-2xl px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400 overflow-y-auto"
+        style={{ maxHeight: 72 }}
+      />
+      <button
+        onClick={handleSend}
+        disabled={!text.trim() || disabled}
+        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-3 rounded-2xl transition disabled:opacity-40 shrink-0"
+      >
+        <Send className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
+
 function StudentHomeContent() {
   const navigate = useNavigate()
   const storedUser = (() => { try { return JSON.parse(localStorage.getItem('zeevid_user') || '{}') } catch { return {} } })()
@@ -57,6 +109,12 @@ function StudentHomeContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [msgTeacher, setMsgTeacher] = useState(null)
+  const [threadMessages, setThreadMessages] = useState([])
+  const [loadingThread, setLoadingThread] = useState(false)
+  const [sendingMsg, setSendingMsg] = useState(false)
+  const messagesEndRef = useRef(null)
 
   const fetchStudyMaterials = useCallback(async () => {
     setLoading(true)
@@ -152,7 +210,60 @@ function StudentHomeContent() {
     }
   }, [selectedDeck])
 
+  // ── Unread count polling ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/messages/unread-count`, { headers: authHeaders() })
+        if (res.ok) { const d = await res.json(); setUnreadCount(d.count || 0) }
+      } catch { /* ignore */ }
+    }
+    poll()
+    const iv = setInterval(poll, 30000)
+    return () => clearInterval(iv)
+  }, [])
+
+  // ── Message fetch ────────────────────────────────────────────────────────────
+  const fetchMyMessages = useCallback(async () => {
+    setLoadingThread(true)
+    try {
+      const res = await fetch(`${API_URL}/api/messages/my-messages`, { headers: authHeaders() })
+      const data = await res.json()
+      if (res.ok) {
+        setMsgTeacher(data.teacher)
+        setThreadMessages(data.messages || [])
+        setUnreadCount(0)
+      }
+    } catch { /* ignore */ } finally { setLoadingThread(false) }
+  }, [])
+
+  useEffect(() => {
+    if (activeSection !== 'messages') return
+    fetchMyMessages()
+    const iv = setInterval(fetchMyMessages, 10000)
+    return () => clearInterval(iv)
+  }, [activeSection, fetchMyMessages])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [threadMessages])
+
+  const handleSendMsg = async (content) => {
+    if (!msgTeacher) return
+    setSendingMsg(true)
+    try {
+      const res = await fetch(`${API_URL}/api/messages/send`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiver_id: msgTeacher.user_id, content }),
+      })
+      const data = await res.json()
+      if (res.ok) setThreadMessages(prev => [...prev, data])
+    } catch { /* ignore */ } finally { setSendingMsg(false) }
+  }
+
   const handleSectionSelect = (sectionKey) => {
+    if (sectionKey === 'profile') { navigate('/profile'); return }
     setActiveSection(current => current === sectionKey ? null : sectionKey)
     setIsSidebarOpen(false)
   }
@@ -162,6 +273,9 @@ function StudentHomeContent() {
     { key: 'decks', label: 'Question Decks', icon: BookOpen, count: decks.length, badgeColor: '#059669' },
     { key: 'results', label: 'My Results', icon: BarChart, count: results.length, badgeColor: '#2563eb' },
     { key: 'personal', label: 'Personal Notes', icon: ClipboardList },
+    { key: '_divider' },
+    { key: 'messages', label: 'Messages', icon: MessageSquare, count: unreadCount, badgeColor: '#dc2626', hideIfZero: true },
+    { key: 'profile', label: 'My Profile', icon: User, noBadge: true },
   ]
 
   const panelClose = () => {
@@ -376,11 +490,76 @@ function StudentHomeContent() {
     </div>
   ))
 
+  const renderStudentMessagesPanel = () => {
+    const myId = storedUser.user_id
+    return (
+      <div
+        className="bg-white rounded-2xl shadow overflow-hidden flex flex-col"
+        style={{ height: 'calc(100vh - 240px)', minHeight: 420 }}
+      >
+        <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-2.5 shrink-0">
+          {msgTeacher ? (
+            <>
+              <div
+                className="rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white shrink-0 overflow-hidden"
+                style={{ width: 32, height: 32, minWidth: 32, fontSize: 12, fontWeight: 700 }}
+              >
+                {msgTeacher.avatar_url
+                  ? <img src={msgTeacher.avatar_url} alt={msgTeacher.full_name} className="w-full h-full object-cover" />
+                  : getMsgInitials(msgTeacher.full_name)}
+              </div>
+              <div>
+                <p className="font-bold text-gray-800 text-sm leading-tight">{msgTeacher.full_name}</p>
+                <p className="text-[11px] text-gray-400">Your Teacher</p>
+              </div>
+            </>
+          ) : (
+            <p className="font-bold text-gray-800 text-sm">Messages</p>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 bg-[#f9fafb]">
+          {loadingThread ? (
+            <div className="flex h-full items-center justify-center text-gray-400 text-sm animate-pulse">Loading messages...</div>
+          ) : !msgTeacher ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-gray-400 text-sm">Your teacher has not been assigned yet.</p>
+            </div>
+          ) : threadMessages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-gray-400 text-sm">No messages yet — send your first message!</p>
+            </div>
+          ) : (
+            <>
+              {threadMessages.map(msg => (
+                <div key={msg.message_id} className={`flex flex-col ${msg.sender_id === myId ? 'items-end' : 'items-start'} mb-3`}>
+                  <div
+                    className={`px-4 py-2.5 text-sm leading-relaxed max-w-[75%] break-words ${msg.sender_id === myId ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200'}`}
+                    style={{ borderRadius: 18 }}
+                  >
+                    {msg.content}
+                  </div>
+                  <span className="text-[11px] text-gray-400 mt-1 px-1">
+                    {msg.sender_id === myId ? 'You' : (msgTeacher?.full_name || 'Teacher')} · {formatMsgTime(msg.created_at)}
+                  </span>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+
+        {msgTeacher && <MsgInput onSend={handleSendMsg} disabled={sendingMsg} />}
+      </div>
+    )
+  }
+
   const renderActiveSection = () => {
     if (!activeSection) return renderEmptyState()
     if (activeSection === 'notes') return renderTeacherNotes()
     if (activeSection === 'decks') return renderDecks()
     if (activeSection === 'results') return renderResults()
+    if (activeSection === 'messages') return renderStudentMessagesPanel()
     return renderPersonalNotes()
   }
 
@@ -435,32 +614,31 @@ function StudentHomeContent() {
             <div className="px-5 pb-3 text-[15px] font-extrabold uppercase tracking-[0.08em] text-[#6b7280] md:px-4 md:pb-2 md:text-[13px] md:font-bold">
               My Learning
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-1.5 px-1">
               {sidebarItems.map(item => {
+                if (item.key === '_divider') {
+                  return <div key="_divider" className="mx-3 my-1 border-t border-gray-200" />
+                }
                 const Icon = item.icon
                 const isActive = activeSection === item.key
-
                 return (
                   <button
                     key={item.key}
                     type="button"
                     onClick={() => handleSectionSelect(item.key)}
-                    className={`mx-3 flex min-h-[64px] w-[calc(100%-24px)] items-center justify-between rounded-[16px] border-2 border-[#e5e7eb] bg-white px-5 py-[18px] text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-150 hover:scale-[1.01] hover:bg-[#f8fafc] hover:border-[#d1d5db] md:mx-2 md:min-h-[44px] md:w-[calc(100%-16px)] md:justify-start md:gap-[10px] md:rounded-lg md:border-0 md:bg-transparent md:px-4 md:py-3 md:shadow-none md:hover:scale-100 md:hover:bg-[#f3f4f6] md:hover:border-transparent ${
-                      isActive ? 'bg-[#f0fdf4] border-[#059669] md:text-[#059669]' : 'text-[#374151]'
-                    } ${
-                      !isActive ? 'md:text-[#374151]' : ''
+                    className={`mx-3 flex min-h-[60px] w-[calc(100%-24px)] items-center justify-between rounded-[16px] border-2 px-5 py-4 text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-150 hover:scale-[1.01] hover:bg-[#f8fafc] hover:border-[#d1d5db] ${
+                      isActive ? 'bg-[#f0fdf4] border-[#059669]' : 'bg-white border-[#e5e7eb]'
                     }`}
-                    style={isActive ? { borderLeft: '3px solid #059669' } : undefined}
                   >
-                    <span className="flex items-center gap-[14px] md:contents">
-                      <Icon className={`shrink-0 ${isActive ? 'text-[#059669]' : 'text-[#374151]'} h-[26px] w-[26px] md:h-4 md:w-4 md:text-current`} />
-                      <span className={`flex-1 text-[17px] font-semibold text-[#1f2937] md:text-[14px] md:font-medium ${isActive ? 'text-[#059669]' : ''}`}>
+                    <span className="flex items-center gap-3">
+                      <Icon className={`shrink-0 h-6 w-6 ${isActive ? 'text-[#059669]' : 'text-[#374151]'}`} />
+                      <span className={`text-[16px] font-semibold ${isActive ? 'text-[#059669]' : 'text-[#1f2937]'}`}>
                         {item.label}
                       </span>
                     </span>
-                    {typeof item.count === 'number' && (
+                    {!item.noBadge && typeof item.count === 'number' && (!item.hideIfZero || item.count > 0) && (
                       <span
-                        className="rounded-full px-[14px] py-[6px] text-[15px] font-extrabold text-white md:px-2 md:py-0.5 md:text-[11px] md:font-bold"
+                        className="rounded-full px-3 py-1 text-[13px] font-extrabold text-white"
                         style={{ backgroundColor: item.badgeColor }}
                       >
                         {item.count}

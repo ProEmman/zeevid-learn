@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Brain, FileText, LayoutDashboard, Menu, Upload as UploadIcon, Users, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, Brain, FileText, LayoutDashboard, Menu, MessageSquare, Send, Upload as UploadIcon, User, Users, X } from 'lucide-react'
 import { API_URL, authHeaders } from '../../utils/api'
 import { supabase } from '../../lib/supabase'
 import PDFViewer from '../../components/PDFViewer'
@@ -20,6 +20,58 @@ const getDocumentStoragePath = (documentUrl) => {
   } catch {
     return null
   }
+}
+
+function getMsgInitials(n) {
+  if (!n) return '?'
+  const p = n.trim().split(/\s+/)
+  return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
+
+function formatMsgTime(ts) {
+  if (!ts) return ''
+  const d = new Date(ts), now = new Date()
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  if (d.toDateString() === now.toDateString()) return time
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' · ' + time
+}
+
+function MsgInput({ onSend, disabled }) {
+  const [text, setText] = useState('')
+  const taRef = useRef(null)
+  const autoResize = () => {
+    if (!taRef.current) return
+    taRef.current.style.height = 'auto'
+    taRef.current.style.height = Math.min(taRef.current.scrollHeight, 72) + 'px'
+  }
+  const handleSend = () => {
+    const t = text.trim()
+    if (!t || disabled) return
+    onSend(t)
+    setText('')
+    if (taRef.current) taRef.current.style.height = 'auto'
+  }
+  return (
+    <div className="border-t border-gray-200 bg-white px-3 py-3 flex items-end gap-2 shrink-0">
+      <textarea
+        ref={taRef}
+        value={text}
+        onChange={e => { setText(e.target.value); autoResize() }}
+        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+        placeholder="Type a message... (Enter to send)"
+        rows={1}
+        className="flex-1 resize-none border border-gray-200 rounded-2xl px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400 overflow-y-auto"
+        style={{ maxHeight: 72 }}
+      />
+      <button
+        onClick={handleSend}
+        disabled={!text.trim() || disabled}
+        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-3 rounded-2xl transition disabled:opacity-40 shrink-0"
+      >
+        <Send className="w-4 h-4" />
+      </button>
+    </div>
+  )
 }
 
 function TeacherDashboard() {
@@ -48,6 +100,16 @@ function TeacherDashboard() {
 
   const [expandedDecks, setExpandedDecks] = useState({})
   const showViewDeck = false
+
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [conversations, setConversations] = useState([])
+  const [selectedConvo, setSelectedConvo] = useState(null)
+  const [threadMessages, setThreadMessages] = useState([])
+  const [loadingConvos, setLoadingConvos] = useState(false)
+  const [loadingThread, setLoadingThread] = useState(false)
+  const [sendingMsg, setSendingMsg] = useState(false)
+  const [msgMobileView, setMsgMobileView] = useState('list')
+  const messagesEndRef = useRef(null)
 
   useEffect(() => {
     fetchAll()
@@ -287,12 +349,80 @@ function TeacherDashboard() {
     <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-lg font-semibold">{level}</span>
   ) : null
 
+  // ── Unread count polling ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/messages/unread-count`, { headers: authHeaders() })
+        if (res.ok) { const d = await res.json(); setUnreadCount(d.count || 0) }
+      } catch { /* ignore */ }
+    }
+    poll()
+    const iv = setInterval(poll, 30000)
+    return () => clearInterval(iv)
+  }, [])
+
+  // ── Message fetch callbacks ──────────────────────────────────────────────────
+  const fetchConversations = useCallback(async () => {
+    setLoadingConvos(true)
+    try {
+      const res = await fetch(`${API_URL}/api/messages/conversations`, { headers: authHeaders() })
+      const data = await res.json()
+      if (res.ok) setConversations(data)
+    } catch { /* ignore */ } finally { setLoadingConvos(false) }
+  }, [])
+
+  const fetchThread = useCallback(async (studentId) => {
+    setLoadingThread(true)
+    try {
+      const res = await fetch(`${API_URL}/api/messages/conversation/${studentId}`, { headers: authHeaders() })
+      const data = await res.json()
+      if (res.ok) {
+        setThreadMessages(data.messages || [])
+        setUnreadCount(0)
+        fetchConversations()
+      }
+    } catch { /* ignore */ } finally { setLoadingThread(false) }
+  }, [fetchConversations])
+
+  useEffect(() => {
+    if (activePanel !== 'messages') return
+    fetchConversations()
+    const iv = setInterval(fetchConversations, 10000)
+    return () => clearInterval(iv)
+  }, [activePanel, fetchConversations])
+
+  useEffect(() => {
+    if (!selectedConvo) return
+    const iv = setInterval(() => fetchThread(selectedConvo.user_id), 8000)
+    return () => clearInterval(iv)
+  }, [selectedConvo, fetchThread])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [threadMessages])
+
+  const handleSendMsg = async (content) => {
+    if (!selectedConvo) return
+    setSendingMsg(true)
+    try {
+      const res = await fetch(`${API_URL}/api/messages/send`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiver_id: selectedConvo.user_id, content }),
+      })
+      const data = await res.json()
+      if (res.ok) setThreadMessages(prev => [...prev, data])
+    } catch { /* ignore */ } finally { setSendingMsg(false) }
+  }
+
   const panelClose = () => {
     setActivePanel(null)
     setIsSidebarOpen(false)
   }
 
   const handlePanelSelect = (panelKey) => {
+    if (panelKey === 'profile') { navigate('/profile'); return }
     setActivePanel(current => current === panelKey ? null : panelKey)
     setIsSidebarOpen(false)
   }
@@ -303,6 +433,9 @@ function TeacherDashboard() {
     { key: 'ai', label: 'AI Questions created', icon: Brain, count: aiCount, badgeColor: '#2563eb' },
     { key: 'decks', label: 'Total decks', icon: BookOpen, count: deckCount, badgeColor: '#059669' },
     { key: 'students', label: 'Students active', icon: Users, count: 0, badgeColor: '#4b5563' },
+    { key: '_divider' },
+    { key: 'messages', label: 'Messages', icon: MessageSquare, count: unreadCount, badgeColor: '#dc2626', hideIfZero: true },
+    { key: 'profile', label: 'My Profile', icon: User, noBadge: true },
   ]
 
   const renderEmptyState = () => (
@@ -561,12 +694,133 @@ function TeacherDashboard() {
     <p className="text-gray-400 text-sm">No active student data is available yet.</p>
   ))
 
+  const renderMessagesPanel = () => {
+    const myId = storedUser.user_id
+    return (
+      <div
+        className="bg-white rounded-2xl shadow overflow-hidden flex"
+        style={{ height: 'calc(100vh - 240px)', minHeight: 420 }}
+      >
+        {/* Left: student list */}
+        <div
+          className={`${msgMobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col border-r border-gray-200 shrink-0`}
+          style={{ width: 220 }}
+        >
+          <div className="px-4 py-3 border-b border-gray-100 shrink-0">
+            <p className="font-bold text-gray-800 text-sm">Student Messages</p>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {loadingConvos && conversations.length === 0 ? (
+              <p className="text-gray-400 text-xs text-center mt-8 animate-pulse px-4">Loading...</p>
+            ) : conversations.length === 0 ? (
+              <p className="text-gray-400 text-xs text-center mt-8 px-4">No student messages yet.</p>
+            ) : conversations.map(convo => {
+              const isSel = selectedConvo?.user_id === convo.user_id
+              return (
+                <button
+                  key={convo.user_id}
+                  onClick={() => { setSelectedConvo(convo); setThreadMessages([]); setMsgMobileView('chat'); fetchThread(convo.user_id) }}
+                  className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left border-b border-gray-50 transition ${isSel ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50'}`}
+                >
+                  <div
+                    className="rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white shrink-0 overflow-hidden"
+                    style={{ width: 34, height: 34, minWidth: 34, fontSize: 12, fontWeight: 700 }}
+                  >
+                    {convo.avatar_url
+                      ? <img src={convo.avatar_url} alt={convo.full_name} className="w-full h-full object-cover" />
+                      : getMsgInitials(convo.full_name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-semibold text-gray-800 text-xs truncate">{convo.full_name}</span>
+                      {convo.unread_count > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 shrink-0 leading-none">{convo.unread_count}</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                      {(convo.last_message || '').length > 35 ? convo.last_message.slice(0, 35) + '…' : (convo.last_message || '')}
+                    </p>
+                    <p className="text-[10px] text-gray-300 mt-0.5">{formatMsgTime(convo.last_message_time)}</p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right: conversation */}
+        <div className={`${msgMobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-col flex-1 overflow-hidden`}>
+          {!selectedConvo ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-gray-400 text-sm">Select a student to view the conversation</p>
+            </div>
+          ) : (
+            <>
+              <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-2.5 shrink-0">
+                <button
+                  onClick={() => setMsgMobileView('list')}
+                  className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition md:hidden"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <div
+                  className="rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white shrink-0 overflow-hidden"
+                  style={{ width: 30, height: 30, minWidth: 30, fontSize: 11, fontWeight: 700 }}
+                >
+                  {selectedConvo.avatar_url
+                    ? <img src={selectedConvo.avatar_url} alt={selectedConvo.full_name} className="w-full h-full object-cover" />
+                    : getMsgInitials(selectedConvo.full_name)}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-800 text-sm leading-tight">{selectedConvo.full_name}</p>
+                  {selectedConvo.class_level && (
+                    <span className="text-[10px] bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">{selectedConvo.class_level}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-4 bg-[#f9fafb]">
+                {loadingThread ? (
+                  <div className="flex h-full items-center justify-center text-gray-400 text-sm animate-pulse">Loading messages...</div>
+                ) : threadMessages.length === 0 ? (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-gray-400 text-sm">No messages yet — send a message to start!</p>
+                  </div>
+                ) : (
+                  <>
+                    {threadMessages.map(msg => (
+                      <div key={msg.message_id} className={`flex flex-col ${msg.sender_id === myId ? 'items-end' : 'items-start'} mb-3`}>
+                        <div
+                          className={`px-4 py-2.5 text-sm leading-relaxed max-w-[75%] break-words ${msg.sender_id === myId ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200'}`}
+                          style={{ borderRadius: 18 }}
+                        >
+                          {msg.content}
+                        </div>
+                        <span className="text-[11px] text-gray-400 mt-1 px-1">
+                          {msg.sender_id === myId ? 'You' : selectedConvo.full_name} · {formatMsgTime(msg.created_at)}
+                        </span>
+                      </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </div>
+
+              <MsgInput onSend={handleSendMsg} disabled={sendingMsg} />
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const renderActivePanel = () => {
     if (!activePanel) return renderEmptyState()
     if (activePanel === 'notes') return renderNotesPanel()
     if (activePanel === 'uploaded') return renderUploadedPanel()
     if (activePanel === 'ai') return renderAiPanel()
     if (activePanel === 'decks') return renderDecksPanel()
+    if (activePanel === 'messages') return renderMessagesPanel()
     return renderStudentsPanel()
   }
 
@@ -621,8 +875,11 @@ function TeacherDashboard() {
             <div className="px-5 pb-3 text-[15px] font-extrabold uppercase tracking-[0.08em] text-[#6b7280] md:px-4 md:pb-2 md:text-[13px] md:font-bold">
               Dashboard
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-1.5 px-1">
               {sidebarItems.map(item => {
+                if (item.key === '_divider') {
+                  return <div key="_divider" className="mx-3 my-1 border-t border-gray-200" />
+                }
                 const Icon = item.icon
                 const isActive = activePanel === item.key
                 return (
@@ -630,25 +887,24 @@ function TeacherDashboard() {
                     key={item.key}
                     type="button"
                     onClick={() => handlePanelSelect(item.key)}
-                    className={`mx-3 flex min-h-[64px] w-[calc(100%-24px)] items-center justify-between rounded-[16px] border-2 border-[#e5e7eb] bg-white px-5 py-[18px] text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-150 hover:scale-[1.01] hover:bg-[#f8fafc] hover:border-[#d1d5db] md:mx-2 md:min-h-[44px] md:w-[calc(100%-16px)] md:justify-start md:gap-[10px] md:rounded-lg md:border-0 md:bg-transparent md:px-4 md:py-3 md:shadow-none md:hover:scale-100 md:hover:bg-[#f3f4f6] md:hover:border-transparent ${
-                      isActive ? 'bg-[#eff6ff] border-[#2563eb] md:text-[#1d4ed8]' : 'text-[#374151]'
-                    } ${
-                      !isActive ? 'md:text-[#374151]' : ''
+                    className={`mx-3 flex min-h-[60px] w-[calc(100%-24px)] items-center justify-between rounded-[16px] border-2 px-5 py-4 text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-150 hover:scale-[1.01] hover:bg-[#f8fafc] hover:border-[#d1d5db] ${
+                      isActive ? 'bg-[#eff6ff] border-[#2563eb]' : 'bg-white border-[#e5e7eb]'
                     }`}
-                    style={isActive ? { borderLeft: '3px solid #1d4ed8' } : undefined}
                   >
-                    <span className="flex items-center gap-[14px] md:contents">
-                      <Icon className={`shrink-0 ${isActive ? 'text-[#1d4ed8]' : 'text-[#374151]'} h-[26px] w-[26px] md:h-4 md:w-4 md:text-current`} />
-                      <span className={`flex-1 text-[17px] font-semibold text-[#1f2937] md:text-[14px] md:font-medium ${isActive ? 'text-[#1d4ed8]' : ''}`}>
+                    <span className="flex items-center gap-3">
+                      <Icon className={`shrink-0 h-6 w-6 ${isActive ? 'text-[#1d4ed8]' : 'text-[#374151]'}`} />
+                      <span className={`text-[16px] font-semibold ${isActive ? 'text-[#1d4ed8]' : 'text-[#1f2937]'}`}>
                         {item.label}
                       </span>
                     </span>
-                    <span
-                      className="rounded-full px-[14px] py-[6px] text-[15px] font-extrabold text-white md:px-2 md:py-0.5 md:text-[11px] md:font-bold"
-                      style={{ backgroundColor: item.badgeColor }}
-                    >
-                      {item.count}
-                    </span>
+                    {!item.noBadge && typeof item.count === 'number' && (!item.hideIfZero || item.count > 0) && (
+                      <span
+                        className="rounded-full px-3 py-1 text-[13px] font-extrabold text-white"
+                        style={{ backgroundColor: item.badgeColor }}
+                      >
+                        {item.count}
+                      </span>
+                    )}
                   </button>
                 )
               })}
