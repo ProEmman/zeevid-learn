@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { API_URL, authHeaders } from '../utils/api'
+import Footer from '../components/Footer'
 import Navbar from '../components/Navbar'
 
 function getInitials(fullName) {
@@ -167,7 +168,7 @@ function StudentMessages() {
     <div className="min-h-screen bg-[#f9fafb] flex flex-col">
       <Navbar />
 
-      <div className="flex-1 flex flex-col max-w-2xl w-full mx-auto h-[calc(100vh-80px)]">
+      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
           <button
@@ -221,6 +222,7 @@ function StudentMessages() {
         {/* Input */}
         {teacher && <MessageInput onSend={handleSend} disabled={sending} />}
       </div>
+      <Footer />
     </div>
   )
 }
@@ -319,8 +321,7 @@ function TeacherMessages() {
       <Navbar />
 
       <div
-        className="flex flex-1 overflow-hidden mx-auto w-full max-w-5xl"
-        style={{ height: 'calc(100vh - 80px)' }}
+        className="flex flex-1 min-h-0 overflow-hidden mx-auto w-full max-w-5xl"
       >
         {/* Left panel: conversation list */}
         <div
@@ -439,6 +440,7 @@ function TeacherMessages() {
           )}
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

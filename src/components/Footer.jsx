@@ -4,7 +4,7 @@ import { Brain, Monitor, Shield } from 'lucide-react'
 const teacherLinks = [
   { label: 'Dashboard', to: '/teacher/dashboard' },
   { label: 'Upload Content', to: '/teacher/upload' },
-  { label: 'Question Builder', to: '/teacher/question-builder' },
+  { label: 'Question Builder', to: '/teacher/builder' },
   { label: 'My Profile', to: '/profile' },
 ]
 
@@ -22,7 +22,7 @@ export default function Footer({ minimal = false }) {
   if (minimal) {
     return (
       <footer className="bg-[#1a1f2e] px-4 py-5 text-center text-[12px] text-white/60">
-        © 2026 ZeeVid Learn+ — Next-generation learning starts here
+        {'© 2026 ZeeVid Learn+ - Next-generation learning starts here'}
       </footer>
     )
   }
@@ -83,7 +83,7 @@ export default function Footer({ minimal = false }) {
         </div>
 
         <div className="mt-6 border-t border-white/15 pt-4 text-center text-[12px] text-white/50">
-          Built with ❤️ for teachers and students everywhere
+          {'Built with ♥ for teachers and students everywhere'}
         </div>
       </div>
     </footer>
